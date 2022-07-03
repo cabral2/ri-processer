@@ -1,3 +1,4 @@
+from cProfile import label
 from typing import List
 from abc import abstractmethod
 from typing import List, Set,Mapping
@@ -40,15 +41,33 @@ class BooleanRankingModel(RankingModel):
         self.operator = operator
 
     def intersection_all(self,map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> List[int]:
+        
         set_ids = set()
-        return None
+        values = list(map_lst_occurrences.values())
+        if len(values) == 0:
+            return []
+ 
+        initial_ids = map(lambda x : x.doc_id , values[0])
+        for value in list(initial_ids):
+            set_ids.add(value)
+
+
+        for  term, lst_occurrences in map_lst_occurrences.items():
+            ids = map(lambda x : x.doc_id , lst_occurrences)
+            set_ids = set_ids.intersection(ids)
+            print(set_ids)
+
+        return list(set_ids)
+
     def union_all(self,map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> List[int]:
         set_ids = set()
         
         for  term, lst_occurrences in map_lst_occurrences.items():
-            pass
+            ids = map(lambda x : x.doc_id , lst_occurrences)
+            for value in list(ids):
+                set_ids.add(value)
 
-        return None
+        return list(set_ids)
 
     def get_ordered_docs(self,query:Mapping[str,TermOccurrence],
                               map_lst_occurrences:Mapping[str,List[TermOccurrence]]) -> (List[int], Mapping[int,float]):
