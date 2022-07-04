@@ -19,6 +19,28 @@ class IndexPreComputedVals():
         """
         self.document_norm = {}
         self.doc_count = self.index.document_count
+
+        vocabulary = self.index.vocabulary
+
+        for term in vocabulary:
+            occurrence_list = self.index.get_occurrence_list(term)
+            for occurrence in occurrence_list:
+                result = VectorRankingModel.tf_idf(self.doc_count, occurrence.term_freq, len(occurrence_list)) ** 2
+                print(result)
+                if occurrence.doc_id in self.document_norm:
+                    self.document_norm[occurrence.doc_id] += result
+                else:
+                    self.document_norm[occurrence.doc_id] = result
+        
+        for id, value in self.document_norm.items():
+            self.document_norm[id] = math.sqrt(value)
+
+        print(self.document_norm)
+
+        return self.document_norm
+                
+        
+
         
 class RankingModel():
     @abstractmethod
@@ -85,16 +107,16 @@ class VectorRankingModel(RankingModel):
 
     @staticmethod
     def tf(freq_term:int) -> float:
-        return 0
+        return 1 + math.log(freq_term, 2)
 
     @staticmethod
     def idf(doc_count:int, num_docs_with_term:int )->float:
-        return 0
+        return math.log(doc_count/num_docs_with_term, 2)
 
     @staticmethod
     def tf_idf(doc_count:int, freq_term:int, num_docs_with_term) -> float:
-        tf = 0
-        idf = 0
+        tf = VectorRankingModel.tf(freq_term)
+        idf = VectorRankingModel.idf(doc_count, num_docs_with_term)
         #print(f"TF:{tf} IDF:{idf} n_i: {num_docs_with_term} N: {doc_count}")
         return tf*idf
 
@@ -102,8 +124,17 @@ class VectorRankingModel(RankingModel):
                               docs_occur_per_term:Mapping[str,List[TermOccurrence]]) -> (List[int], Mapping[int,float]):
             documents_weight = {}
 
-
-
+            for doc_id, value in self.idx_pre_comp_vals.document_norm.items():
+                soma = 0
+                for term, list_term_occur in docs_occur_per_term.items():
+                    wij = 0
+                    wiq = 0
+                    for term_occur in list_term_occur:
+                        if term_occur.doc_id == doc_id:
+                            wij = self.tf_idf(self.idx_pre_comp_vals.doc_count, term_occur.term_freq, len(list_term_occur))
+                    
+                    for term_occur in list_term_occur:
+                        if term_occur.doc_id == doc_id:
 
 
             #retona a lista de doc ids ordenados de acordo com o TF IDF
