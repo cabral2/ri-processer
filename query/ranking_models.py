@@ -1,4 +1,5 @@
 from cProfile import label
+from pydoc import doc
 from typing import List
 from abc import abstractmethod
 from typing import List, Set,Mapping
@@ -126,22 +127,27 @@ class VectorRankingModel(RankingModel):
 
             relevant_doc_ids = {}
             for query_term, query_term_occur in query.items():
-                relevant_doc_ids[query_term] = list(map(lambda x : x.doc_id, docs_occur_per_term[query_term]))
+                if query_term in docs_occur_per_term.keys():
+                    relevant_doc_ids[query_term] = list(map(lambda x : x.doc_id, docs_occur_per_term[query_term]))
 
 
             for term, doc_ids in relevant_doc_ids.items():
                 list_term_occur = docs_occur_per_term[term]
                 for doc_id in doc_ids:
-                    doc_value = self.idx_pre_comp_vals.document_norm[doc_id]
-                    soma = 0
                     for term_occur in list_term_occur:
                         if term_occur.doc_id == doc_id:
                             wij = self.tf_idf(self.idx_pre_comp_vals.doc_count, term_occur.term_freq, len(list_term_occur))
                             wiq =  self.tf_idf(self.idx_pre_comp_vals.doc_count, query[term].term_freq, len(list_term_occur))
-                            soma += wij * wiq
-                            print(term, doc_id, soma)
+                            if doc_id in documents_weight.keys():
+                                documents_weight[doc_id] += wij * wiq
+                            else:
+                                documents_weight[doc_id] = wij * wiq
+                            print(term, doc_id, documents_weight[doc_id])
 
-                    documents_weight[doc_id] = soma/doc_value
+            
+            for doc_id in documents_weight.keys():
+                doc_value = self.idx_pre_comp_vals.document_norm[doc_id]
+                documents_weight[doc_id] = documents_weight[doc_id]/doc_value
                     
 
             # for doc_id, value in self.idx_pre_comp_vals.document_norm.items():
