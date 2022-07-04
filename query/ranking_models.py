@@ -124,18 +124,41 @@ class VectorRankingModel(RankingModel):
                               docs_occur_per_term:Mapping[str,List[TermOccurrence]]) -> (List[int], Mapping[int,float]):
             documents_weight = {}
 
-            for doc_id, value in self.idx_pre_comp_vals.document_norm.items():
-                soma = 0
-                for term, list_term_occur in docs_occur_per_term.items():
-                    wij = 0
-                    wiq = 0
+            relevant_doc_ids = {}
+            for query_term, query_term_occur in query.items():
+                relevant_doc_ids[query_term] = list(map(lambda x : x.doc_id, docs_occur_per_term[query_term]))
+
+
+            for term, doc_ids in relevant_doc_ids.items():
+                list_term_occur = docs_occur_per_term[term]
+                for doc_id in doc_ids:
+                    doc_value = self.idx_pre_comp_vals.document_norm[doc_id]
+                    soma = 0
                     for term_occur in list_term_occur:
                         if term_occur.doc_id == doc_id:
                             wij = self.tf_idf(self.idx_pre_comp_vals.doc_count, term_occur.term_freq, len(list_term_occur))
-                    
-                    for term_occur in list_term_occur:
-                        if term_occur.doc_id == doc_id:
+                            wiq =  self.tf_idf(self.idx_pre_comp_vals.doc_count, query[term].term_freq, len(list_term_occur))
+                            soma += wij * wiq
+                            print(term, doc_id, soma)
 
+                    documents_weight[doc_id] = soma/doc_value
+                    
+
+            # for doc_id, value in self.idx_pre_comp_vals.document_norm.items():
+            #     soma = 0
+            #     for term, list_term_occur in docs_occur_per_term.items():
+            #         wij = 0
+            #         wiq = 0
+            #         for term_occur in list_term_occur:
+            #             if term_occur.doc_id == doc_id:
+            #                 wij = self.tf_idf(self.idx_pre_comp_vals.doc_count, term_occur.term_freq, len(list_term_occur))
+            #                 wiq = self.tf_idf(self.idx_pre_comp_vals.doc_count, query[term].term_freq, len(list_term_occur))
+            #                 soma += wij * wiq
+            #                 print(term, doc_id, soma)
+
+
+            #     if soma != 0:    
+            #         documents_weight[doc_id] = soma/value
 
             #retona a lista de doc ids ordenados de acordo com o TF IDF
             return self.rank_document_ids(documents_weight),documents_weight
