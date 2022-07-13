@@ -1,8 +1,8 @@
 from typing import List, Set,Mapping
 from nltk.tokenize import word_tokenize
 from util.time import CheckTime
-from query.ranking_models import RankingModel,VectorRankingModel, IndexPreComputedVals
-from index.structure import Index, TermOccurrence
+from query.ranking_models import BooleanRankingModel, RankingModel,VectorRankingModel, IndexPreComputedVals
+from index.structure import FileIndex, Index, TermOccurrence
 from index.indexer import Cleaner
 
 class QueryRunner:
@@ -143,22 +143,46 @@ class QueryRunner:
 	@staticmethod
 	def main():
 		#leia o indice (base da dados fornecida)
-		index = None
+		index = FileIndex()
+		index.read('wiki.idx')
+
+		cleaner = Cleaner(stop_words_file="stopwords.txt",
+                language="portuguese",
+                perform_stop_words_removal=True,
+                perform_accents_removal=True,
+                perform_stemming=True)
 
 		#Checagem se existe um documento (apenas para teste, deveria existir)
-		print(f"Existe o doc? index.hasDocId(105047)")
+		# print(f"Existe o doc? index.hasDocId(105047)")
 
 		#Instancie o IndicePreCompModelo para pr ecomputar os valores necessarios para a query
 		print("Precomputando valores atraves do indice...");
 		check_time = CheckTime()
 
-
-
+		idx_pre = IndexPreComputedVals(index).document_norm
 
 		check_time.print_delta("Precomputou valores")
 
+		print("Informe qual modelo de ranking usar:")
+		print('(1) Booleano')
+		print('(2) Vetorial')
+		model = input()
+
+		ranking_model = None
+		if model == '1':
+			print("Digite o operador:")
+			print('(1) AND')
+			print('(2) OR')
+
+			ranking_model = BooleanRankingModel(int(input()))
+
+		if model == '2':
+			ranking_model = VectorRankingModel(idx_pre)
+
+		runner = QueryRunner(ranking_model, index, cleaner)
+
 		#encontra os docs relevantes
-		map_relevance = None
+		map_relevance = runner.get_relevance_per_query()
 
 		print("Fazendo query...")
 		#aquui, peça para o usuário uma query (voce pode deixar isso num while ou fazer um interface grafica se estiver bastante animado ;)
