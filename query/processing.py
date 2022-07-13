@@ -30,10 +30,14 @@ class QueryRunner:
 		Considere que respostas já é a lista de respostas ordenadas por um método de processamento de consulta (BM25, Modelo vetorial).
 		Os documentos relevantes estão no parametro docRelevantes
 		"""
+		i = 0
 		relevance_count = 0
 		for doc in respostas:
+			if i >= n:
+				break
 			if doc in doc_relevantes:
 				relevance_count += 1
+			i += 1
 
 
 		return relevance_count
@@ -54,6 +58,19 @@ class QueryRunner:
 		"""
 		#print(self.index)
 		map_term_occur = {}
+		words = query.split(' ')
+
+		for word in words:
+			processed = self.cleaner.preprocess_word(word)
+
+			if processed not in self.index.dic_index.keys():
+				continue
+
+			if processed in map_term_occur:
+				map_term_occur[processed].term_freq += 1
+			else:
+				map_term_occur[processed] = TermOccurrence(None, self.index.get_term_id(processed), 1)
+
 		return map_term_occur
 
 	def get_occurrence_list_per_term(self, terms:List) -> Mapping[str, List[TermOccurrence]]:
@@ -61,6 +78,13 @@ class QueryRunner:
 			Retorna dicionario a lista de ocorrencia no indice de cada termo passado como parametro.
 			Caso o termo nao exista, este termo possuirá uma lista vazia
 		"""
+		dic_terms = {}
+		for term in terms:
+			if term in self.index.dic_index.keys():
+				dic_terms[term] = self.index.get_occurrence_list(term)
+			else:
+				dic_terms[term] = []
+
 		return dic_terms
 
 	def get_docs_term(self, query:str) -> List[int]:
@@ -69,14 +93,15 @@ class QueryRunner:
 			usando o modelo especificado pelo atributo ranking_model
 		"""
 		#Obtenha, para cada termo da consulta, sua ocorrencia por meio do método get_query_term_occurence
-		dic_query_occur = None
+		dic_query_occur = self.get_query_term_occurence(query)
 
 		#obtenha a lista de ocorrencia dos termos da consulta
-		dic_occur_per_term_query = None
+		dic_occur_per_term_query = self.get_occurrence_list_per_term(dic_query_occur.keys())
 
 
 		#utilize o ranking_model para retornar o documentos ordenados considrando dic_query_occur e dic_occur_per_term_query
-		return None
+		return self.ranking_model.get_ordered_docs(dic_query_occur, dic_occur_per_term_query)
+		 
 
 	@staticmethod
 	def runQuery(query:str, indice:Index, indice_pre_computado:IndexPreComputedVals , map_relevantes:Mapping[str,Set[int]]):

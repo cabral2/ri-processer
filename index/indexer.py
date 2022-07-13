@@ -53,7 +53,10 @@ class Cleaner:
         if self.perform_stop_words_removal and self.is_stop_word(term):
             return None
 
-        term = self.preprocess_text(term)
+        term = term.lower()
+
+        if self.perform_accents_removal:
+            term = self.preprocess_text(term)
 
         if self.perform_stemming:
             return self.word_stem(term)
